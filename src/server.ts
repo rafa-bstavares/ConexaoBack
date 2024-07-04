@@ -681,7 +681,7 @@ server.post("/pegarInfoCliente", confereTokenAtendente, async (req: Request, res
   const {idCliente} = req.body
 
   try{
-    let arrInfoCliente = await db("usuarios").select("nome", "email").where({id: Number(idCliente)})
+    let arrInfoCliente = await db("usuarios").select("nome", "email", "saldo").where({id: Number(idCliente)})
     for(let i = 0; i < arrInfoCliente.length; i++){
       const arrPrecoTempo = await db("salas").select("precoConsulta", "tempoConsulta").where({id_cliente: idCliente, id_profissional: tokenDecod.id})
       if(arrPrecoTempo){
@@ -778,6 +778,24 @@ server.get("/meusHistoricosAtendente", confereTokenAtendente, async (req: Reques
   }catch(err){
     return res.json(["erro", "ocorreu um erro ao pegar o histórico. Por favor, tente novamente"])
   }
+})
+
+server.post("/setarStatus", confereTokenAtendente, async (req: Request, res: Response) => {
+  const tokenDecod = tokenAtendenteDecodificado(req, res)
+
+  if(!tokenDecod.id){
+    return res.json(["erro", "erro ao decodificar o token do atendente. Por favor tente novamente. Caso persista é recomendado que faça login novamente."])
+  }
+
+  const {status} = req.body
+
+  try{
+    await db("profissionais").update({status}).where({id: tokenDecod.id})
+    return res.json(["status atualizado"])
+  }catch(err){
+    return res.json(["erro"])
+  }
+
 })
 
 server.get("/infoAtendente", async (req: Request, res: Response) => {
