@@ -35,14 +35,18 @@ interface ServerToClientEvents {
   mudStatus: (data: {status: string, id: number}) => void,
   salaEncerrada: (data: {msg: string, idSala: string}) => void,
   precoTempoServMsg: (data: {preco: number, tempo: number}) => void,
-  erroMsg: (data: {erroMsg: string}) => void
+  erroMsg: (data: {erroMsg: string}) => void,
+  clienteChamando: (data: {idProfissional: number, nomeCliente: string, idCliente: number}) => void,
+  respostaAtendente: (data: {msg: string, idCliente: number, idProfissional: number}) => void
 }
 
 
 interface ClientToServerEvents {
   clientMsg: (data: {msg: string, room: string}) => void,
   adicionarNaSala: (data: {room: string}) => void,
-  tempoPreco: (data: {tempo: number, preco: number, room: string}) => void
+  tempoPreco: (data: {tempo: number, preco: number, room: string}) => void,
+  chamarAtendente: (data: {idProfissional: number, nomeCliente: string, idCliente: number}) => void,
+  respostaChamarAtendente: (data: {msg:  string, idCliente: number, idProfissional: number}) => void
 }
 
 io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
@@ -95,6 +99,14 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
   socket.on("adicionarNaSala", (data: {room: string}) => {
     socket.join(data.room)
     console.log("a sala é " + data.room)
+  })
+
+  socket.on("chamarAtendente", (data: {idProfissional: number, nomeCliente: string, idCliente: number}) => {
+    io.sockets.emit("clienteChamando", {idProfissional: data.idProfissional, nomeCliente: data.nomeCliente, idCliente: data.idCliente})
+  })
+
+  socket.on("respostaChamarAtendente", (data: {msg: string, idCliente: number, idProfissional: number}) => {
+    io.sockets.emit("respostaAtendente", {msg: data.msg, idCliente: data.idCliente, idProfissional: data.idProfissional})
   })
 
   socket.on("tempoPreco", (data: {tempo: number, preco: number, room: string}) => {
@@ -1151,7 +1163,9 @@ server.post("/atualizarTempoConsulta", confereTokenUsuario, async (req: Request,
 
 })
 
-server.post("/confereSalas", async (req: Request, res: Response) => {
+server.post("/confereSalas", confereTokenUsuario, async (req: Request, res: Response) => {
+  //tem que conferir direto pelo status pq o cara pode ter setado ocupado mesmo estando sem sala pra ir no banheiro por exemplo
+
   const tokenDecod = tokenUsuarioDecodificado(req, res)
   const {idProfissional} = req.body
 
@@ -1160,12 +1174,27 @@ server.post("/confereSalas", async (req: Request, res: Response) => {
   }
 
   try{
-    const arrSalaCliente = await db("salas").select("idSala").where({id_cliente: tokenDecod.id, id_profissional: idProfissional})
-    if(arrSalaCliente.length > 0){
-      return res.json(["sucesso", "sala existente", arrSalaCliente[0].idSala])
+
+    const arrStatusProfissional = await db("profissionais").select("status").where({id: idProfissional})
+
+    if(arrStatusProfissional.length > 0){
+      if(arrStatusProfissional[0].status == "online"){
+        //tá disponível
+        return res.json(["sucesso", "criar sala"])
+      }else if(arrStatusProfissional[0].status == "ocupado"){
+        const arrSalaCliente = await db("salas").select("idSala").where({id_cliente: tokenDecod.id, id_profissional: idProfissional})
+        if(arrSalaCliente.length > 0){
+          return res.json(["sucesso", "sala existente", arrSalaCliente[0].idSala])
+        }else{
+          return res.json(["sucesso", "profissional ocupado"])
+        }
+      }else{
+        return res.json(["sucesso", "profissional não disponível"])
+      }
     }else{
-      return res.json(["sucesso", "criar sala"])
+      return res.json(["erro", "ocorreu um erro ao pegar o status do atendente."])
     }
+
   }catch(err){
       return res.json(["erro", "ocorreu um erro ao conferir dados no banco de dados. Por favor, tente novamente"])
   }
@@ -1207,21 +1236,24 @@ server.get("/buscarSalasAtendente", confereTokenAtendente, async (req: Request, 
   try{
     arrConversas = await db("salas").select("idSala", "id_cliente", "tempoConsulta", "precoConsulta").where({id_profissional: tokenDecod.id}).andWhere({aberta: true})
     console.log("id q chegou do profissional é: " + tokenDecod.id)
-    for(let i = 0; i < arrConversas.length; i++){
-      const idClienteAtual = arrConversas[i].id_cliente
-      const arrNomeAtual = await db("usuarios").select("nome").where({id: idClienteAtual})
-      const arrPrecoTempoAtual = await db("salas").select("tempoConsulta", "precoConsulta").where({id_cliente: idClienteAtual})
-
-      if(arrNomeAtual.length > 0 && arrPrecoTempoAtual.length > 0){
-        arrConversas[i].nome = arrNomeAtual[0].nome
-        arrConversas[i].precoConsulta = arrPrecoTempoAtual[0].precoConsulta
-        arrConversas[i].tempoConsulta = arrPrecoTempoAtual[0].tempoConsulta
-      }else{
-        arrConversas[i].nome = "Usuário"
-        arrConversas[i].precoConsulta = 0
-        arrConversas[i].tempoConsulta = 0
+    if(arrConversas.length > 0){
+      for(let i = 0; i < arrConversas.length; i++){
+        const idClienteAtual = arrConversas[i].id_cliente
+        const arrNomeAtual = await db("usuarios").select("nome", "saldo").where({id: idClienteAtual})
+        const arrPrecoTempoAtual = await db("salas").select("tempoConsulta", "precoConsulta").where({id_cliente: idClienteAtual})
+  
+        if(arrNomeAtual.length > 0 && arrPrecoTempoAtual.length > 0){
+          arrConversas[i].nome = arrNomeAtual[0].nome
+          arrConversas[i].precoConsulta = arrPrecoTempoAtual[0].precoConsulta
+          arrConversas[i].tempoConsulta = arrPrecoTempoAtual[0].tempoConsulta
+          arrConversas[i].saldo = arrNomeAtual[0].saldo
+        }else{
+          arrConversas[i].nome = "Usuário"
+          arrConversas[i].precoConsulta = 0
+          arrConversas[i].tempoConsulta = 0
+        }
+  
       }
-
     }
 
     console.log(arrConversas)
@@ -1229,7 +1261,8 @@ server.get("/buscarSalasAtendente", confereTokenAtendente, async (req: Request, 
     return res.json(["erro", "ocorreu um erro ao buscar os dados no banco de dados"])
   }
 
-  res.json(["sucesso", arrConversas])
+  return res.json(["sucesso", arrConversas])
+
 })
 
 
