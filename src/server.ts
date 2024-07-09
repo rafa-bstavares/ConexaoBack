@@ -1,5 +1,5 @@
 import express, {Response, Request, NextFunction} from "express"
-import { MercadoPagoConfig, Payment } from 'mercadopago';
+import { MercadoPagoConfig, Payment, } from 'mercadopago';
 import cors from "cors"
 import multer from "multer"
 import path from "path"
@@ -42,6 +42,7 @@ interface ServerToClientEvents {
 
 
 interface ClientToServerEvents {
+  acionaMudStatus: (data: {status: string, id: number}) => void,
   clientMsg: (data: {msg: string, room: string}) => void,
   adicionarNaSala: (data: {room: string}) => void,
   tempoPreco: (data: {tempo: number, preco: number, room: string}) => void,
@@ -94,6 +95,10 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
     }
 
 
+  })
+
+  socket.on("acionaMudStatus", (data: {status: string, id: number}) => {
+    io.sockets.emit("mudStatus", {status: data.status, id: data.id})
   })
 
   socket.on("adicionarNaSala", (data: {room: string}) => {
@@ -303,6 +308,10 @@ server.get("/", (req:Request, res:Response) => {
     res.send("api funcionando")
 })
 
+server.get("/confereTokenAdmGeral", confereTokenAdmGeral, (req: Request, res: Response) => {
+  res.json(["sucesso", "acesso liberado"])
+})
+
 server.get("/confereTokenAtendente", confereTokenAtendente, (req: Request, res: Response) => {
   res.json(["sucesso", "acesso liberado"])
 })
@@ -313,13 +322,13 @@ server.get("/confereTokenUsuario", confereTokenUsuario, (req: Request, res: Resp
 
 
 server.post("/cadastrarUsuario", async (req: Request, res: Response) => {
-  const {emailUsuCadastrar, senhaUsuCadastrar, nomeUsuCadastrar} = req.body
+  const {emailUsuCadastrar, senhaUsuCadastrar, nomeUsuCadastrar, dataNas} = req.body
 
   try{
     const arrEmailsCadastrados = await db("usuarios").select("email")
     if(arrEmailsCadastrados.every(item => item.email !== emailUsuCadastrar)){
 
-      await db("usuarios").insert({nome: nomeUsuCadastrar, email: emailUsuCadastrar})
+      await db("usuarios").insert({nome: nomeUsuCadastrar, email: emailUsuCadastrar, dataNas})
       const arrIdUsuAtual = await db("usuarios").select("id").where({email: emailUsuCadastrar})
 
       bcrypt.genSalt(10, function(err, salt) {
@@ -330,6 +339,36 @@ server.post("/cadastrarUsuario", async (req: Request, res: Response) => {
             }else{
                 //usuarios tem o email como primary key e os outros como foreign, logo tem q criar em usuarios primeiro pra dps poder criar nos outros
                 await db('loginusuario').insert({email: emailUsuCadastrar, hash, id_usuario: arrIdUsuAtual[0].id}) 
+                return res.json(["sucesso", "cadastro feito com sucesso"])
+            }
+        });
+      });
+    }else{
+      return res.json(["erro", "esse email já está cadastrado"])
+    }
+  }catch(err){
+    return res.json(["erro", "ocorreu um erro ao inserir os valores no banco de dados, por favor, tente novamente. Caso persista contate o suporte."])
+  }
+})
+
+server.post("/cadastrarAdm", async (req: Request, res: Response) => {
+  const {emailUsuCadastrar, senhaUsuCadastrar, nomeUsuCadastrar} = req.body
+
+  try{
+    const arrEmailsCadastrados = await db("admgeral").select("email")
+    if(arrEmailsCadastrados.every(item => item.email !== emailUsuCadastrar)){
+
+      await db("admgeral").insert({nome: nomeUsuCadastrar, email: emailUsuCadastrar})
+      const arrIdUsuAtual = await db("admgeral").select("id").where({email: emailUsuCadastrar})
+
+      bcrypt.genSalt(10, function(err, salt) {
+        bcrypt.hash(senhaUsuCadastrar, salt, async function(err, hash) {
+            if(err){
+                res.json(["erro", "não foi possível cadastrar a senha"])
+                return
+            }else{
+                //usuarios tem o email como primary key e os outros como foreign, logo tem q criar em usuarios primeiro pra dps poder criar nos outros
+                await db('loginadmgeral').insert({email: emailUsuCadastrar, hash, id_admGeral: arrIdUsuAtual[0].id}) 
                 return res.json(["sucesso", "cadastro feito com sucesso"])
             }
         });
@@ -379,6 +418,30 @@ server.get("/pegarTrabalhos", async (req: Request, res: Response) => {
       res.json(["erro", "ocorreu um erro: " + err])
     }
 })
+
+server.get("/listaClientes", confereTokenAdmGeral, async (req: Request, res: Response) => {
+  try{
+    const arrClientes = await db("usuarios").select("nome", "email", "saldo", "id")
+    res.json(["sucesso", arrClientes])
+
+  }catch(err){
+    res.json(["erro", "não foi possível pegar os dados dos clientes. Por favor, tente novamente"])
+  }
+})
+
+
+server.post("/alterarSaldo", confereTokenAdmGeral, async (req: Request, res: Response) => {
+  const {novoSaldo, idMudarSaldo} = req.body
+
+  try{
+    await db("usuarios").update({saldo: novoSaldo, previsaoSaldo: novoSaldo}).where({id: idMudarSaldo})
+    return res.json(["sucesso", "saldo atualizado com sucesso!"])
+  }catch(err){
+    return res.json(["erro", "não foi possível atualizar o saldo. Por favor, tente novamente"])
+  }
+
+})
+
 
 server.post("/postarBlog", uploadImg.single("imgPost"), async (req: Request, res: Response) => {
 
@@ -607,9 +670,11 @@ server.post("/login", async (req: Request, res: Response) => {
 
       case "admGeral":
         loginBd = "loginadmgeral"
+        tipoIdAtual = "id_admGeral"
         if(process.env.SECRET_ADM_GERAL){
           secret = process.env.SECRET_ADM_GERAL 
         }else{
+          console.log("ta vindoaquiiiii")
           return res.json(["erro", "problema ao encontrar o secret no servidor"])
         }
     }
@@ -648,6 +713,133 @@ server.post("/login", async (req: Request, res: Response) => {
       res.status(400).json(["erro", "Ocorreu um erro ao inserir dados no banco de dados, por favor, tente novamente"] as ReturnJsonType)
   }
 
+})
+
+
+server.post("/redefinirSenhaAdmGeral", confereTokenAdmGeral, async (req: Request, res: Response) => {
+  const {senhaNova, senhaAntiga} = req.body
+
+  const tokenDecod = tokenAdmGeralDecodificado(req, res)
+
+  console.log("tokendecod")
+  console.log(tokenDecod)
+
+  if(!tokenDecod.id){
+    return res.json(["erro", "erro ao decodificar o token do administrador. Por favor tente novamente. Caso persista é recomendado que faça login novamente."])
+  }
+
+  try{
+    const arrHash = await db("loginadmgeral").select("hash").where({id_admGeral: tokenDecod.id})
+
+    if(arrHash.length > 0){
+      bcrypt.compare(senhaAntiga, arrHash[0].hash, async function(err, resp) {
+        if(resp){
+          bcrypt.genSalt(10, function(err, salt) {
+            bcrypt.hash(senhaNova, salt, async function(err, hash) {
+                if(err){
+                  return res.json(["erro", "não foi possível cadastrar a nova senha, por favor, tente novamente. Problemas no bcrypt"])
+                }else{
+                    //usuarios tem o email como primary key e os outros como foreign, logo tem q criar em usuarios primeiro pra dps poder criar nos outros
+                    await db('loginadmgeral').update({hash}).where({id_admGeral: tokenDecod.id}) //A unica coisa que mudei foi a ordem desses doissssssssss
+                    return res.json(["sucesso", "Nova senha definida com sucesso!"])
+                }
+            });
+          });
+        }else{
+            return res.status(401).json(["erro", "senha Antiga errada"])
+        }
+      });
+    }else{
+      return res.json(["erro", "não foi possível cadastrar a nova senha, por favor, tente novamente. Possível problema com o token. Caso persista é recomendado que seja feito o login novammente"])
+    }
+
+
+  }catch(err){
+    return res.status(401).json(["erro", "Não foi possível redefinir a senha. Por favor tente novamente"])
+  }
+
+})
+
+server.post("/redefinirSenhaAtendente", confereTokenAtendente, async (req: Request, res: Response) => {
+  const {senhaNova, senhaAntiga} = req.body
+
+  const tokenDecod = tokenAtendenteDecodificado(req, res)
+
+
+  if(!tokenDecod.id){
+    return res.json(["erro", "erro ao decodificar o token do administrador. Por favor tente novamente. Caso persista é recomendado que faça login novamente."])
+  }
+
+  try{
+    const arrHash = await db("loginatendentes").select("hash").where({id_profissional: tokenDecod.id})
+
+    if(arrHash.length > 0){
+      bcrypt.compare(senhaAntiga, arrHash[0].hash, async function(err, resp) {
+        if(resp){
+          bcrypt.genSalt(10, function(err, salt) {
+            bcrypt.hash(senhaNova, salt, async function(err, hash) {
+                if(err){
+                  return res.json(["erro", "não foi possível cadastrar a nova senha, por favor, tente novamente. Problemas no bcrypt"])
+                }else{
+                    //usuarios tem o email como primary key e os outros como foreign, logo tem q criar em usuarios primeiro pra dps poder criar nos outros
+                    await db('loginatendentes').update({hash}).where({id_profissional: tokenDecod.id}) //A unica coisa que mudei foi a ordem desses doissssssssss
+                    return res.json(["sucesso", "Nova senha definida com sucesso!"])
+                }
+            });
+          });
+        }else{
+            return res.status(401).json(["erro", "senha Antiga errada"])
+        }
+      });
+    }else{
+      return res.json(["erro", "não foi possível cadastrar a nova senha, por favor, tente novamente. Possível problema com o token. Caso persista é recomendado que seja feito o login novammente"])
+    }
+
+
+  }catch(err){
+    return res.status(401).json(["erro", "Não foi possível redefinir a senha. Por favor tente novamente"])
+  }
+})
+
+server.post("/redefinirSenhaUsuario", confereTokenUsuario, async (req: Request, res: Response) => {
+  const {senhaNova, senhaAntiga} = req.body
+
+  const tokenDecod = tokenUsuarioDecodificado(req, res)
+
+
+  if(!tokenDecod.id){
+    return res.json(["erro", "erro ao decodificar o token do administrador. Por favor tente novamente. Caso persista é recomendado que faça login novamente."])
+  }
+
+  try{
+    const arrHash = await db("loginusuario").select("hash").where({id_usuario: tokenDecod.id})
+
+    if(arrHash.length > 0){
+      bcrypt.compare(senhaAntiga, arrHash[0].hash, async function(err, resp) {
+        if(resp){
+          bcrypt.genSalt(10, function(err, salt) {
+            bcrypt.hash(senhaNova, salt, async function(err, hash) {
+                if(err){
+                  return res.json(["erro", "não foi possível cadastrar a nova senha, por favor, tente novamente. Problemas no bcrypt"])
+                }else{
+                    //usuarios tem o email como primary key e os outros como foreign, logo tem q criar em usuarios primeiro pra dps poder criar nos outros
+                    await db('loginusuario').update({hash}).where({id_usuario: tokenDecod.id}) //A unica coisa que mudei foi a ordem desses doissssssssss
+                    return res.json(["sucesso", "Nova senha definida com sucesso!"])
+                }
+            });
+          });
+        }else{
+            return res.status(401).json(["erro", "senha Antiga errada"])
+        }
+      });
+    }else{
+      return res.json(["erro", "não foi possível cadastrar a nova senha, por favor, tente novamente. Possível problema com o token. Caso persista é recomendado que seja feito o login novammente"])
+    }
+
+
+  }catch(err){
+    return res.status(401).json(["erro", "Não foi possível redefinir a senha. Por favor tente novamente"])
+  }
 })
 
 
@@ -693,7 +885,7 @@ server.post("/pegarInfoCliente", confereTokenAtendente, async (req: Request, res
   const {idCliente} = req.body
 
   try{
-    let arrInfoCliente = await db("usuarios").select("nome", "email", "saldo").where({id: Number(idCliente)})
+    let arrInfoCliente = await db("usuarios").select("nome", "email", "saldo", "dataNas").where({id: Number(idCliente)})
     for(let i = 0; i < arrInfoCliente.length; i++){
       const arrPrecoTempo = await db("salas").select("precoConsulta", "tempoConsulta").where({id_cliente: idCliente, id_profissional: tokenDecod.id})
       if(arrPrecoTempo){
@@ -1239,11 +1431,12 @@ server.get("/buscarSalasAtendente", confereTokenAtendente, async (req: Request, 
     if(arrConversas.length > 0){
       for(let i = 0; i < arrConversas.length; i++){
         const idClienteAtual = arrConversas[i].id_cliente
-        const arrNomeAtual = await db("usuarios").select("nome", "saldo").where({id: idClienteAtual})
+        const arrNomeAtual = await db("usuarios").select("nome", "saldo", "dataNas").where({id: idClienteAtual})
         const arrPrecoTempoAtual = await db("salas").select("tempoConsulta", "precoConsulta").where({id_cliente: idClienteAtual})
   
         if(arrNomeAtual.length > 0 && arrPrecoTempoAtual.length > 0){
           arrConversas[i].nome = arrNomeAtual[0].nome
+          arrConversas[i].dataNas = arrNomeAtual[0].dataNas
           arrConversas[i].precoConsulta = arrPrecoTempoAtual[0].precoConsulta
           arrConversas[i].tempoConsulta = arrPrecoTempoAtual[0].tempoConsulta
           arrConversas[i].saldo = arrNomeAtual[0].saldo
@@ -1330,9 +1523,34 @@ server.post("/pagamentoPix", confereTokenUsuario, async (req: Request, res: Resp
   }
 
 
+})
+
+
+server.post("/pagamentoCartao", confereTokenUsuario, async (req: Request, res:Response) => {
 
 
 
+  payment.create({
+    body: { 
+        transaction_amount: req.body.transaction_amount,
+        token: req.body.token,
+        description: "Aumento de saldo Conexão Mística",
+        installments: req.body.installments,
+        payment_method_id: req.body.payment_method_id,
+        issuer_id: req.body.issuer_id,
+            payer: {
+            email: req.body.payer.email,
+            identification: {
+        type: req.body.payer.identification.type,
+        number: req.body.payer.identification.number
+    }}},
+    requestOptions: { idempotencyKey: 'abcdefghijklmnop' }
+  })
+  .then((result) => {
+    console.log("RESPOSTA CARTAAAAAAO")
+    console.log(result)
+  })
+  .catch((error) => console.log(error));
 })
 
 
@@ -1390,5 +1608,12 @@ server.get("/statusPagamento", confereTokenUsuario, async (req: Request, res: Re
 server.post("/testeCartao", (req: Request, res: Response) => {
   console.log(req.body)
 })
+
+/* 
+backurls: 
+{
+  success? http://localhost:8080/pagarCartao/:idCliente
+}
+*/
 
 httpServer.listen(8080)
