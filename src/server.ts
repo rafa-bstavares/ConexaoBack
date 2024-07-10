@@ -37,7 +37,7 @@ const db = knex({
   connection: {
     host: "167.88.32.149",
     port: 3306,
-    user: "rafael",
+    user: "root",
     password: process.env.MYSQL_SENHA,
     database: "conexao",
   },
