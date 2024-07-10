@@ -13,12 +13,17 @@ import dotenv from "dotenv"
 
 dotenv.config()
 const server = express()
-server.use(cors())
+const corsOptions = {
+  origin: ["http://localhost:5173", "http://167.88.32.149/"],
+  credentials: true,
+  optionsSuccessStatus: 200,
+}
+server.use(cors(corsOptions))
 server.use(express.json())
 const httpServer = createServer(server)
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: {
-    origin: ["http://localhost:5173"]
+    origin: ["http://localhost:5173", "http://167.88.32.149/"]
   }
 })
 
