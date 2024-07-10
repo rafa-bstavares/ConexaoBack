@@ -14,7 +14,7 @@ import dotenv from "dotenv"
 dotenv.config()
 const server = express()
 const corsOptions = {
-  origin: ["*"],
+  origin: "*",
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
