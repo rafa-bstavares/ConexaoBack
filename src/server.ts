@@ -35,7 +35,7 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
 const db = knex({
   client: "mysql",
   connection: {
-    host: "167.88.32.149:8080",
+    host: "167.88.32.149",
     port: 3306,
     user: "root",
     password: "conexao2024#",
