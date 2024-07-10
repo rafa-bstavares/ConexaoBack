@@ -38,7 +38,7 @@ const db = knex({
     host: "167.88.32.149",
     port: 3306,
     user: "root",
-    password: "",
+    password: "conexao2024#",
     database: "conexao",
   },
 });
