@@ -25,12 +25,23 @@ server.use(express.json())
 const httpServer = createServer(server)
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: {
-    origin: ["http://localhost:5173", "http://167.88.32.149/", "http://167.88.32.149:5173"],
+    origin: "*",
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   }
 })
+
+const db = knex({
+  client: "mysql",
+  connection: {
+    host: "127.0.0.1",
+    port: 3306,
+    user: "root",
+    password: process.env.MYSQL_SENHA,
+    database: "conexao",
+  },
+});
 
 
 const client = new MercadoPagoConfig({ accessToken: process.env.ACCESS_TOKEN ? process.env.ACCESS_TOKEN : "", options: { timeout: 5000 } });
@@ -408,16 +419,7 @@ const storage = multer.diskStorage({
 
 const uploadImg = multer({ storage });
 
-const db = knex({
-  client: "mysql",
-  connection: {
-    host: "127.0.0.1",
-    port: 3306,
-    user: "root",
-    password: process.env.MYSQL_SENHA,
-    database: "conexao",
-  },
-});
+
 
 
 server.get("/pegarTrabalhos", async (req: Request, res: Response) => {
