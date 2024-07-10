@@ -23,7 +23,10 @@ server.use(express.json())
 const httpServer = createServer(server)
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: {
-    origin: ["http://localhost:5173", "http://167.88.32.149/"]
+    origin: ["http://localhost:5173", "http://167.88.32.149/"],
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   }
 })
 
