@@ -1503,7 +1503,7 @@ server.post("/pagamentoPix", confereTokenUsuario, async (req: Request, res: Resp
             email: req.body.email,
             identification: {
         type: req.body.identificationType,
-        number: req.body.number
+        number: req.body.number,
       }}}
 
       payment.create({ body, requestOptions: { idempotencyKey: arrPagamentoExistente[0].idempotencyKey} }).then(async (result) => {
@@ -1520,7 +1520,8 @@ server.post("/pagamentoPix", confereTokenUsuario, async (req: Request, res: Resp
             email: req.body.email,
             identification: {
         type: req.body.identificationType,
-        number: req.body.number
+        number: req.body.number,
+        notification_url: ""
       }}}
   
       console.log("PAGAMENTO PIIIIIIXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
@@ -1563,15 +1564,25 @@ server.post("/pagamentoCartao", confereTokenUsuario, async (req: Request, res:Re
         type: req.body.payer.identification.type,
         number: req.body.payer.identification.number
     }}},
-    requestOptions: { idempotencyKey: 'abcdefghijklmnop' }
+    requestOptions: { idempotencyKey: 'abcdefghijklmnop' },
+    
   })
   .then((result) => {
     console.log("RESPOSTA CARTAAAAAAO")
     console.log(result)
   })
   .catch((error) => console.log(error));
+
+
 })
 
+
+server.post("/notifPag", (req: Request, res: Response) => {
+  console.log("HEADER")
+  console.log(req.header)
+  console.log("BODY")
+  console.log(req.body)
+})
 
 
 server.get("/statusPagamento", confereTokenUsuario, async (req: Request, res: Response) => {
@@ -1631,7 +1642,7 @@ server.post("/testeCartao", (req: Request, res: Response) => {
 /* 
 backurls: 
 {
-  success? http://localhost:8080/pagarCartao/:idCliente
+  success? http://167.88.32.149/pagarCartao/:idCliente
 }
 */
 
