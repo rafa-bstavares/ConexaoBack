@@ -1520,8 +1520,7 @@ server.post("/pagamentoPix", confereTokenUsuario, async (req: Request, res: Resp
             email: req.body.email,
             identification: {
         type: req.body.identificationType,
-        number: req.body.number,
-        notification_url: ""
+        number: req.body.number
       }}}
   
       console.log("PAGAMENTO PIIIIIIXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
