@@ -134,6 +134,7 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
   })
 
   socket.on("chamarAtendente", (data: {idProfissional: number, nomeCliente: string, idCliente: number}) => {
+    console.log("id do profissional solicitado: " + data.idProfissional)
     io.sockets.emit("clienteChamando", {idProfissional: data.idProfissional, nomeCliente: data.nomeCliente, idCliente: data.idCliente})
   })
 
