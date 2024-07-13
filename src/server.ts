@@ -1590,9 +1590,9 @@ server.post("/pagamentoCartao", confereTokenUsuario, async (req: Request, res:Re
     let objRespCartao = {}
 
     if(result.id && tokenDecod.id && status && result.transaction_amount){
-      objRespCartao = {id_pagamento: result.id, id_cliente: tokenDecod.id, status, valor: result.transaction_amount}
+      objRespCartao = {id_pagamento: result.id.toString(), id_cliente: tokenDecod.id, status, valor: result.transaction_amount}
     }else{
-      objRespCartao = {id_pagamento: 0, id_cliente: 0, status: "", valor: 0}
+      objRespCartao = {id_pagamento: "", id_cliente: 0, status: "", valor: 0}
     }
 
     try{
