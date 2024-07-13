@@ -9,6 +9,7 @@ import { Server, Socket } from "socket.io"
 import bcrypt from "bcryptjs"
 import jwt, { JwtPayload } from "jsonwebtoken"
 import dotenv from "dotenv"
+import { v4 as uuidv4 } from 'uuid';
 
 
 dotenv.config()
@@ -1547,7 +1548,11 @@ server.post("/pagamentoPix", confereTokenUsuario, async (req: Request, res: Resp
 
 server.post("/pagamentoCartao", confereTokenUsuario, async (req: Request, res:Response) => {
 
+  const tokenDecod = tokenUsuarioDecodificado(req, res)
 
+  if(!tokenDecod.id){
+    return res.json(["erro", "erro ao decodificar o token do usuário. Por favor tente novamente. Caso persista é recomendado que faça login novamente."])
+  }
 
   payment.create({
     body: { 
@@ -1563,12 +1568,42 @@ server.post("/pagamentoCartao", confereTokenUsuario, async (req: Request, res:Re
         type: req.body.payer.identification.type,
         number: req.body.payer.identification.number
     }}},
-    requestOptions: { idempotencyKey: 'abcdefghijklmnop' },
+    requestOptions: { idempotencyKey: uuidv4() },
     
   })
-  .then((result) => {
+  .then(async (result) => {
     console.log("RESPOSTA CARTAAAAAAO")
     console.log(result)
+
+    let status = ""
+    if(result.status == "approved"){
+      status = "aprovado"
+      //adicionar valor na conta do cliente
+      const arrSaldos = await db("usuarios").select("saldo", "previsaoSaldo").where({id: tokenDecod.id})
+      await db("usuarios").update({saldo: arrSaldos[0].saldo + result.transaction_amount, previsaoSaldo: arrSaldos[0].previsaoSaldo + result.transaction_amount}).where({id: tokenDecod.id})
+    }else if(result.status == "rejected"){
+      status = "negado"
+    }else{
+      status = "sem info"
+    }
+
+    let objRespCartao = {}
+
+    if(result.id && tokenDecod.id && status && result.transaction_amount){
+      objRespCartao = {id_pagamento: result.id, id_cliente: tokenDecod.id, status, valor: result.transaction_amount}
+    }else{
+      objRespCartao = {id_pagamento: 0, id_cliente: 0, status: "", valor: 0}
+    }
+
+    try{
+      await db("pagcartao").insert(objRespCartao)
+      res.json(["sucesso", objRespCartao])
+    }catch(err){
+      res.json(["erro", "houve um problema na conexão com nosso banco de dados. Caso o valor tenha sido cobrado, apresente o comprovante para o seguinte número +55 11 91636-7979"])
+    }
+    
+
+
   })
   .catch((error) => console.log(error));
 
