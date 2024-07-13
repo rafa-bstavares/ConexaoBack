@@ -1599,6 +1599,8 @@ server.post("/pagamentoCartao", confereTokenUsuario, async (req: Request, res:Re
       await db("pagcartao").insert(objRespCartao)
       res.json(["sucesso", objRespCartao])
     }catch(err){
+      console.log("PROBLEMA NO BANCOOOOOOOO")
+      console.log(err)
       res.json(["erro", "houve um problema na conexão com nosso banco de dados. Caso o valor tenha sido cobrado, apresente o comprovante para o seguinte número +55 11 91636-7979"])
     }
     
