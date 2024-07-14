@@ -595,10 +595,8 @@ server.post("/apagarProfissional", confereTokenAdmGeral, async (req: Request, re
     
   if(idProfissionalApagar){
     try{
-      await db.transaction(async trx => {
-        trx("loginatendentes").where({id_profissional: idProfissionalApagar}).del()
-        trx("profissionais").where({id: idProfissionalApagar}).del()
-      })
+      db("loginatendentes").where({id_profissional: idProfissionalApagar}).del()
+      db("profissionais").where({id: idProfissionalApagar}).del()
 
       res.json(["sucesso", "profissional removido com sucesso"])
   
