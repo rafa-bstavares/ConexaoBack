@@ -587,6 +587,28 @@ server.post("/addInfosProfissional", async (req: Request, res: Response) => {
 
 })
 
+server.post("/apagarProfissional", confereTokenAdmGeral, async (req: Request, res: Response) => {
+
+  const {idProfissionalApagar} = req.body
+    
+  if(idProfissionalApagar){
+    try{
+      await db.transaction(async trx => {
+        trx("loginatendentes").where({id_profissional: idProfissionalApagar}).del()
+        trx("profissionais").where({id: idProfissionalApagar}).del()
+      })
+
+      res.json(["sucesso", "profissional removido com sucesso"])
+  
+    }catch(err){
+      return res.json(["erro", "Erro: " + err])
+    }
+  }else{
+    return res.json(["erro", "id enviado para apagar nulo, undefined ou zero"])
+  }
+
+})
+
 
 server.get("/pegarInfoProfissionais", async (req: Request, res: Response) => {
     try{
