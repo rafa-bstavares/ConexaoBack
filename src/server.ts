@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 dotenv.config()
 const server = express()
 const corsOptions = {
-  origin: ["https://www.conexaoastralmistica.com.br", "167.88.32.149", "https://conexaoastralmistica.com.br"],
+  origin: ["https://www.conexaoastralmistica.com.br", "https://conexaoastralmistica.com.br"],
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
