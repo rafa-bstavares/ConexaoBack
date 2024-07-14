@@ -590,6 +590,8 @@ server.post("/addInfosProfissional", async (req: Request, res: Response) => {
 server.post("/apagarProfissional", confereTokenAdmGeral, async (req: Request, res: Response) => {
 
   const {idProfissionalApagar} = req.body
+  console.log("ID PROF APAGAR")
+  console.log(idProfissionalApagar)
     
   if(idProfissionalApagar){
     try{
