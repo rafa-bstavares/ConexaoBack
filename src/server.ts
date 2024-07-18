@@ -1557,7 +1557,12 @@ server.post("/pagamentoPix", confereTokenUsuario, async (req: Request, res: Resp
         }catch(err){ 
           return res.json(["erro", "ocorreu um erro ao pegar dados do banco de dados"])
         }
-        res.json(["sucesso", result])
+        if(result.api_response.status == 200){
+          res.json(["sucesso", result])
+        }else{
+          return res.json(["erro", result])
+        }
+
       }).catch((err) => res.json(["erro", "ocorreu um erro no pagamento: "+ err]))
     }
   }catch(err){
