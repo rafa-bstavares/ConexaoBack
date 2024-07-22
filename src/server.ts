@@ -16,7 +16,7 @@ dotenv.config()
 const server = express()
 const corsOptions = {
   origin: ["https://www.conexaoastralmistica.com.br", "https://conexaoastralmistica.com.br"],
-  methods: ['GET', 'POST'],
+  methods: "*",
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
   optionsSuccessStatus: 200,
