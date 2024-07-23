@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 dotenv.config()
 const server = express()
 const corsOptions = {
-  origin: ["https://www.conexaoastralmistica.com.br", "https://conexaoastralmistica.com.br"],
+  origin: "*",//["https://www.conexaoastralmistica.com.br", "https://conexaoastralmistica.com.br"],
   methods: "*",
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -486,6 +486,51 @@ server.post("/postarBlog", uploadImg.single("imgPost"), async (req: Request, res
 
     res.json(["sucesso", "postado com sucesso"])
 })
+
+
+server.get("/pegarPreviews", async (req: Request, res: Response) => {
+    try{
+
+      const arrPosts = await db("posts").select()
+      for(let i = 0; i < arrPosts.length; i++){
+        const itemPost = arrPosts[i]
+        itemPost.img = ""
+        if(itemPost.texto.length > 140){
+          itemPost.texto = itemPost.texto.slice(0, 141)
+        }
+      }
+
+      const arrImgs = await db("imagensblog").select()
+      if(arrImgs.length > 0){
+        for(let i = 0; i < arrImgs.length; i++){
+          const idxPost = arrPosts.indexOf((item: { id: number, img: string, titulo: string, texto: string, data_postagem: Date}) => item.id == arrImgs[i].id_post )
+          if(idxPost > -1){
+            arrPosts[idxPost].img = arrImgs[i].path_img_blog
+          }
+        }
+      }
+
+      res.json(["sucesso", arrPosts])
+
+    }catch(err){
+      res.json(["erro"])
+    }
+})
+
+
+server.post("/pegarTextoPost", async (req: Request, res: Response) => {
+  const {idPost} = req.body
+
+  try{
+    const arrTexto = await db("posts").select("texto").where({id: idPost})
+
+    res.json(["sucesso", arrTexto[0].texto])
+  }catch(err){
+    res.json(["erro"])
+  }
+
+})
+
 
 server.post("/cadastrarTrabalho", uploadImg.array("files"), async (req: Request, res: Response) => {
     const {novoTrabalho} = req.body
