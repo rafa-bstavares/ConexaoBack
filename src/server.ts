@@ -26,7 +26,7 @@ server.use(express.json())
 const httpServer = createServer(server)
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: {
-    origin: ["https://www.conexaoastralmistica.com.br", "https://conexaoastralmistica.com.br"],
+    origin: "*",//["https://www.conexaoastralmistica.com.br", "https://conexaoastralmistica.com.br"],
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
