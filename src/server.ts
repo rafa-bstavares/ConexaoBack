@@ -1354,7 +1354,7 @@ server.get("/quantoFaltaCliente", async (req: Request, res: Response) => {
 
 })
 
-server.get("/quantoFaltaAtendente", async (req: Request, res: Response) => {
+server.get("/quantoFaltaAtendente", confereTokenAtendente, async (req: Request, res: Response) => {
   const tokenDecod = tokenAtendenteDecodificado(req, res)
 
   try{
