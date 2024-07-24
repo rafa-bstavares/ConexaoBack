@@ -1370,9 +1370,11 @@ server.get("/quantoFaltaAtendente", confereTokenAtendente, async (req: Request, 
       console.log(minutosRestantes)
       console.log(segundosRestantes)
       return res.json(["sucesso", {minutosRestantes, segundosRestantes}])
+    }else{
+      return res.json(["sem sala", "Você não tem nenhuma sala aberto no momento"])
     }
 
-    return ["sem sala", "Você não tem nenhuma sala aberto no momento"]
+
 
 
   }catch(err){
