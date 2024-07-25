@@ -1293,6 +1293,84 @@ server.post("/encerrarAtendimento", confereTokenAtendente, async (req:  Request,
 })
 
 
+
+server.post("/encerrarAtendimentoCliente", confereTokenUsuario, async (req:  Request, res: Response) => {
+  const tokenDecod = tokenUsuarioDecodificado(req, res)
+
+  const {idProfissional} = req.body
+
+  if(tokenDecod.id == 0 || !tokenDecod){
+    return res.json(["erro", "ocorreu algum erro ao verificar o token"])
+  }
+
+  try{
+    const arrIdSala = await db("salas").select("idSala").where({id_profissional: idProfissional})
+    if(arrIdSala.length > 0){
+      const arrHistorico = await db("salas").select("historico", "precoConsulta", "inicioConsulta", "finalConsulta").where({idSala: arrIdSala[0].idSala})
+      const diaConsulta = new Date()
+      if(arrHistorico[0].historico){
+        await db("historicossalvos").insert({historico: arrHistorico[0].historico, id_cliente: tokenDecod.id, id_profissional: idProfissional, data: diaConsulta, precoConsulta: arrHistorico[0].precoConsulta, inicioConsulta: arrHistorico[0].inicioConsulta, finalConsulta: arrHistorico[0].finalConsulta})
+        const arrFinalReal = await db("historicossalvos").select("finalReal").where({historico: arrHistorico[0].historico, id_cliente: tokenDecod.id, id_profissional: idProfissional})
+        if(arrFinalReal.length > 0){
+          const finalReal = arrFinalReal[0].finalReal
+          const difTempo =  Math.abs(arrHistorico[0].finalConsulta.getTime() - finalReal.getTime())/60000
+          if(difTempo > 0){
+            //preco final não é o previsto e precisa ser calculado
+            console.log("PRECO FINAL NÃAAAO É O PREVISTO, ACABOU ANTESSSSS")
+            const duracaoReal = Math.abs(finalReal.getTime() - arrHistorico[0].inicioConsulta)/60000
+            const difTempoMin = duracaoReal.toFixed(2).toString().split(".")
+            const minutosConsulta = Number(difTempoMin[0])
+            const segundosConsulta = Number(difTempoMin[1])*60/100
+            const arrValorMin = await db("profissionais").select("valorMin").where({id: idProfissional})
+            if(arrValorMin.length > 0){
+              if(segundosConsulta > 0){
+                const minutosFinal = minutosConsulta + 1
+                const valorTotal = minutosFinal * arrValorMin[0].valorMin
+                await db("historicossalvos").update({precoReal: valorTotal}).where({historico: arrHistorico[0].historico, id_cliente: tokenDecod.id, id_profissional: idProfissional})
+                const arrSaldo = await db("usuarios").select("saldo").where({id: tokenDecod.id})
+                if(arrSaldo.length > 0){
+                  await db("usuarios").update({saldo: arrSaldo[0].saldo - valorTotal, previsaoSaldo: arrSaldo[0].saldo - valorTotal}).where({id: tokenDecod.id})
+                }
+
+              }else{
+                const valorTotal = minutosConsulta * arrValorMin[0].valorMin
+                await db("historicossalvos").update({precoReal: valorTotal}).where({historico: arrHistorico[0].historico, id_cliente: tokenDecod.id, id_profissional: idProfissional})
+                const arrSaldo = await db("usuarios").select("saldo").where({id: tokenDecod.id})
+                if(arrSaldo.length > 0){
+                  await db("usuarios").update({saldo: arrSaldo[0].saldo - valorTotal, previsaoSaldo: arrSaldo[0].saldo - valorTotal}).where({id: tokenDecod.id})
+                }
+              }
+            }
+            
+          }else{
+            //preco final é o preco previsto
+            console.log("O PRECO FINAL É O PREVISTO ACABOU NA HORA OU DEPOISSSS")
+            await db("historicossalvos").update({precoReal: arrHistorico[0].precoConsulta}).where({historico: arrHistorico[0].historico, id_cliente: tokenDecod.id, id_profissional: idProfissional})
+            const arrSaldo = await db("usuarios").select("saldo").where({id: tokenDecod.id})
+            if(arrSaldo.length > 0){
+              await db("usuarios").update({saldo: arrSaldo[0].saldo - arrHistorico[0].precoConsulta, previsaoSaldo: arrSaldo[0].saldo - arrHistorico[0].precoConsulta}).where({id: tokenDecod.id})
+            }
+          }
+
+        }
+      }
+      await db("salas").where({id_profissional: idProfissional}).del()
+      console.log("ANTES SOCKET ENCERRAR SALA")
+      io.sockets.to(arrIdSala[0].idSala.toString()).emit("salaEncerrada", {msg: "cliente", idSala: arrIdSala[0].idSala.toString()})
+      console.log("DEPOIS SOCKET ENCERRAR SALA")
+      io.in(arrIdSala[0].id).socketsLeave(arrIdSala[0].idSala)
+      io.sockets.emit("mudStatus", {status: "online", id: idProfissional})
+      return res.json(["sucesso", "atendimento finalizado com sucesso"])
+    }else{
+      return res.json(["sucesso", "não existem salas abertas para serem encerradas"])
+    }
+  }catch(err){
+    res.json(["erro", "ocorreu um erro ao finalizar o atendimento"])
+  }
+})
+
+
+
 server.post("/mudarSaldo", confereTokenUsuario, async (req: Request, res: Response) => {
   const {previsaoSaldo} = req.body
 
