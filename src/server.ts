@@ -1871,6 +1871,8 @@ server.get("/statusPagamentoDentroConsulta", confereTokenUsuario, async (req: Re
 
               if(arrFinalConsultaAtual.length > 0){
                 await db("salas").update({finalConsulta: db.raw('date_add(?, INTERVAL ? minute)', [arrFinalConsultaAtual[0].finalConsulta, tempoMinAdicionar])}).where({id_cliente: tokenDecod.id}).andWhere({aberta: true})
+                const arrSaldos = await db("usuarios").select("saldo").where({id: tokenDecod.id})
+                await db("usuarios").update({saldo: arrSaldos[0].saldo + result.transaction_amount}).where({id: tokenDecod.id})
               }
             }
           }
