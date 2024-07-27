@@ -974,18 +974,21 @@ server.post("/pegarInfoCliente", confereTokenAtendente, async (req: Request, res
   try{
     let arrInfoCliente = await db("usuarios").select("nome", "email", "saldo", "dataNas").where({id: Number(idCliente)})
     for(let i = 0; i < arrInfoCliente.length; i++){
-      const arrPrecoTempo = await db("salas").select("precoConsulta", "tempoConsulta").where({id_cliente: idCliente, id_profissional: tokenDecod.id})
+      const arrPrecoTempo = await db("salas").select("precoConsulta", "tempoConsulta", "finalConsulta").where({id_cliente: idCliente, id_profissional: tokenDecod.id})
       if(arrPrecoTempo){
         if(arrPrecoTempo[0]){
           arrInfoCliente[i].tempoConsulta = arrPrecoTempo[0].tempoConsulta
           arrInfoCliente[i].precoConsulta = arrPrecoTempo[0].precoConsulta
+          arrInfoCliente[i].finalConsulta = arrPrecoTempo[0].finalConsulta
         }else{
           arrInfoCliente[i].tempoConsulta = 0
           arrInfoCliente[i].precoConsulta = 0
+          arrInfoCliente[i].finalConsulta = new Date()
         }
       }else{
         arrInfoCliente[i].tempoConsulta = 0
         arrInfoCliente[i].precoConsulta = 0
+        arrInfoCliente[i].finalConsulta = new Date()
       }
 
     }
@@ -1568,7 +1571,7 @@ server.get("/buscarSalaUsuario", confereTokenUsuario, async (req: Request, res: 
 
   try{
     if(tokenDecod.id){
-      const arrIdSalaAtual = await db("salas").select("idSala", "tempoConsulta", "precoConsulta").where({id_cliente: tokenDecod.id})
+      const arrIdSalaAtual = await db("salas").select("idSala", "tempoConsulta", "precoConsulta", "finalConsulta").where({id_cliente: tokenDecod.id})
       return res.json(["sucesso", arrIdSalaAtual[0]])
     }else{
       return res.json(["erro", "ocorreu algum erro. Por favor, tente novamente"])
@@ -1593,24 +1596,26 @@ server.get("/buscarSalasAtendente", confereTokenAtendente, async (req: Request, 
   let arrConversas = []
 
   try{
-    arrConversas = await db("salas").select("idSala", "id_cliente", "tempoConsulta", "precoConsulta").where({id_profissional: tokenDecod.id}).andWhere({aberta: true})
+    arrConversas = await db("salas").select("idSala", "id_cliente", "tempoConsulta", "precoConsulta", "finalConsulta").where({id_profissional: tokenDecod.id}).andWhere({aberta: true})
     console.log("id q chegou do profissional é: " + tokenDecod.id)
     if(arrConversas.length > 0){
       for(let i = 0; i < arrConversas.length; i++){
         const idClienteAtual = arrConversas[i].id_cliente
         const arrNomeAtual = await db("usuarios").select("nome", "saldo", "dataNas").where({id: idClienteAtual})
-        const arrPrecoTempoAtual = await db("salas").select("tempoConsulta", "precoConsulta").where({id_cliente: idClienteAtual})
+        const arrPrecoTempoAtual = await db("salas").select("tempoConsulta", "precoConsulta", "finalConsulta").where({id_cliente: idClienteAtual})
   
         if(arrNomeAtual.length > 0 && arrPrecoTempoAtual.length > 0){
           arrConversas[i].nome = arrNomeAtual[0].nome
           arrConversas[i].dataNas = arrNomeAtual[0].dataNas
           arrConversas[i].precoConsulta = arrPrecoTempoAtual[0].precoConsulta
           arrConversas[i].tempoConsulta = arrPrecoTempoAtual[0].tempoConsulta
+          arrConversas[i].finalConsultaConsulta = arrPrecoTempoAtual[0].finalConsultaConsulta
           arrConversas[i].saldo = arrNomeAtual[0].saldo
         }else{
           arrConversas[i].nome = "Usuário"
           arrConversas[i].precoConsulta = 0
           arrConversas[i].tempoConsulta = 0
+          arrConversas[i].finalConsulta = new Date()
         }
   
       }
