@@ -1828,6 +1828,71 @@ server.get("/statusPagamento", confereTokenUsuario, async (req: Request, res: Re
 })
 
 
+
+server.get("/statusPagamentoDentroConsulta", confereTokenUsuario, async (req: Request, res: Response) => {
+  const tokenDecod = tokenUsuarioDecodificado(req, res)
+
+  if(!tokenDecod.id){
+    return res.json(["erro", "erro ao decodificar o token do usuário. Por favor tente novamente. Caso persista é recomendado que faça login novamente."])
+  }
+
+  try{
+    const arrInfosPagamentos = await db("pagamentos").select().where({id_cliente: tokenDecod.id, status: "aberto"})
+    console.log("ARRINFOS PAGAMENTOOOOOSOSSSS")
+    console.log(arrInfosPagamentos)
+    if(arrInfosPagamentos.length > 0){
+      const item = arrInfosPagamentos[0]
+
+      const body = { 
+        transaction_amount: item.valor,
+        description: "",
+        payment_method_id: "pix",
+            payer: {
+            email: "rafatavdev@gmail.com",
+            identification: {
+        type: "cpf",
+        number: "17162148743"
+      }}}
+
+
+      payment.create({ body, requestOptions: { idempotencyKey: item.idempotencyKey} }).then(async (result) => {
+        console.log(result)
+        if(result.status_detail == "accredited"){
+          await db("pagamentos").update({status: "pago"}).where({id_cliente: tokenDecod.id, id_pagamento: result.id})
+
+          const arrIdPro = await db("salas").select("id_profissional").where({id_cliente: tokenDecod.id})
+
+          if(arrIdPro.length > 0){
+            const arrMinPro = await db("profissionais").select("valorMin").where({id: arrIdPro[0].id_profissional})
+            if(arrMinPro.length > 0 && result.transaction_amount){
+              const tempoMinAdicionar = result.transaction_amount/arrMinPro[0].valorMin
+
+              const arrFinalConsultaAtual = await db("salas").select("finalConsulta").where({id_cliente: tokenDecod.id})
+
+              if(arrFinalConsultaAtual.length > 0){
+                await db("salas").update({finalConsulta: db.raw('date_add(?, INTERVAL ? minute)', [arrFinalConsultaAtual[0].finalConsulta, tempoMinAdicionar])}).where({id_cliente: tokenDecod.id}).andWhere({aberta: true})
+              }
+            }
+          }
+          return res.json(["pago"])
+        }else{
+          return res.json(["pagamento em aberto"])
+        }
+      }).catch((err) => res.json(["erro",  err]))
+
+
+    }else{
+      res.json(["sem pagamentos"])
+    }
+  }catch(err){
+    res.json(["erro", "ocorreu um erro ao pegar valores do pagamento existente"])
+  }
+
+
+})
+
+
+
 server.post("/testeCartao", (req: Request, res: Response) => {
   console.log(req.body)
 })
