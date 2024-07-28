@@ -1867,10 +1867,10 @@ server.get("/statusPagamentoDentroConsulta", confereTokenUsuario, async (req: Re
             if(arrMinPro.length > 0 && result.transaction_amount){
               const tempoMinAdicionar = result.transaction_amount/arrMinPro[0].valorMin
 
-              const arrFinalConsultaAtual = await db("salas").select("finalConsulta").where({id_cliente: tokenDecod.id})
+              const arrFinalConsultaAtual = await db("salas").select("finalConsulta", "tempoConsulta", "precoConsulta").where({id_cliente: tokenDecod.id})
 
               if(arrFinalConsultaAtual.length > 0){
-                await db("salas").update({finalConsulta: db.raw('date_add(?, INTERVAL ? minute)', [arrFinalConsultaAtual[0].finalConsulta, tempoMinAdicionar])}).where({id_cliente: tokenDecod.id}).andWhere({aberta: true})
+                await db("salas").update({finalConsulta: db.raw('date_add(?, INTERVAL ? minute)', [arrFinalConsultaAtual[0].finalConsulta, tempoMinAdicionar]), tempoConsulta: arrFinalConsultaAtual[0].tempoConsulta + tempoMinAdicionar, precoConsulta: arrFinalConsultaAtual[0].precoConsulta + result.transaction_amount}).where({id_cliente: tokenDecod.id}).andWhere({aberta: true})
                 const arrSaldos = await db("usuarios").select("saldo").where({id: tokenDecod.id})
                 await db("usuarios").update({saldo: arrSaldos[0].saldo + result.transaction_amount}).where({id: tokenDecod.id})
               }
@@ -1890,6 +1890,24 @@ server.get("/statusPagamentoDentroConsulta", confereTokenUsuario, async (req: Re
     res.json(["erro", "ocorreu um erro ao pegar valores do pagamento existente"])
   }
 
+
+})
+
+
+
+server.get("/cancelarPagamento", confereTokenUsuario, async (req: Request, res: Response) => {
+  const tokenDecod = tokenUsuarioDecodificado(req, res)
+
+  if(!tokenDecod.id){
+    return res.json(["erro", "erro ao decodificar o token do usuário. Por favor tente novamente. Caso persista é recomendado que faça login novamente."])
+  }
+
+  try{
+    await db("pagamentos").update({status: "cancelado"}).where({id_cliente: tokenDecod.id, status: "aberto"})
+    return res.json(["sucesso", "cancelado com sucesso"])
+  }catch(err){
+    return res.json(["erro", "erro ao cancelar o pagamento. Pode ser que não exista pagamento em aberto"])
+  }
 
 })
 
