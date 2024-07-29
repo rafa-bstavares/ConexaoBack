@@ -380,6 +380,28 @@ server.post("/cadastrarUsuario", async (req: Request, res: Response) => {
   }
 })
 
+server.post("/editarCampo", confereTokenAdmGeral, async (req: Request, res: Response) => {
+  type TipoBody = {
+    nomeCampo: "nome" | "email" | "descricaoMenor" | "descricaoMaior" | "valorMin",
+    valorCampo: string | number,
+    idProfissional: number
+  }
+
+  const {nomeCampo, valorCampo, idProfissional}: TipoBody = req.body
+
+  let objUpdate: any = {}
+  objUpdate[nomeCampo] = valorCampo
+
+  try{
+    await db("profissionais").update(objUpdate).where({id: idProfissional})
+    const arrNovosDados = await db("profissionais").select().where({id: idProfissional})
+    return res.json(["sucesso", arrNovosDados[0]])
+  }catch(err){
+    return res.json(["erro", "ocorreu um erro ao acessar o banco de dados"])
+  }
+
+})
+
 server.post("/cadastrarAdm", async (req: Request, res: Response) => {
   const {emailUsuCadastrar, senhaUsuCadastrar, nomeUsuCadastrar} = req.body
 
@@ -596,10 +618,10 @@ server.post("/addFotoProfissional", (req: Request, res: Response) => {
 })
 
 server.post("/addInfosProfissional", async (req: Request, res: Response) => {
-  const {nomeProf, emailProf, descricaoMenor, descricaoMaior, id, valorMin} = req.body
+  const {nomeProf, emailProf, descricaoMenor, descricaoMaior, id, valorMin, percentualPro} = req.body
 
   try{
-    await db("profissionais").update({nome: nomeProf, email: emailProf, descricaoMenor, descricaoMaior, valorMin}).where({id})
+    await db("profissionais").update({nome: nomeProf, email: emailProf, descricaoMenor, descricaoMaior, valorMin, percentualPro}).where({id})
 
     /*for(let i = 0; i < arrTrabalho.length; i++){
       let trabalhoAtual = arrTrabalho[i]
