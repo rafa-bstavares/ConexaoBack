@@ -1870,11 +1870,13 @@ server.get("/statusPagamentoDentroConsulta", confereTokenUsuario, async (req: Re
               const arrFinalConsultaAtual = await db("salas").select("finalConsulta", "tempoConsulta", "precoConsulta").where({id_cliente: tokenDecod.id})
 
               if(arrFinalConsultaAtual.length > 0){
-                console.log("TEMPO CONSULLLTAAAA")
-                console.log(arrFinalConsultaAtual[0].tempoConsulta)
-                console.log("PRECO CONSULLLTAAAA")
+                console.log("TEMPO CONSULLLTAAAA ADICIONAR")
+                console.log(tempoMinAdicionar)
+                console.log("PRECO CONSULLLTAAAA adicionar")
+                console.log(result.transaction_amount)
                 console.log(arrFinalConsultaAtual[0].precoConsulta)
-                await db("salas").update({finalConsulta: db.raw('date_add(?, INTERVAL ? minute)', [arrFinalConsultaAtual[0].finalConsulta, tempoMinAdicionar]), tempoConsulta: arrFinalConsultaAtual[0].tempoConsulta + tempoMinAdicionar, precoConsulta: arrFinalConsultaAtual[0].precoConsulta + result.transaction_amount}).where({id_cliente: tokenDecod.id}).andWhere({aberta: true})
+                await db("salas").update({finalConsulta: db.raw('date_add(?, INTERVAL ? minute)', [arrFinalConsultaAtual[0].finalConsulta, tempoMinAdicionar])}).where({id_cliente: tokenDecod.id}).andWhere({aberta: true})
+                await db("salas").update({tempoConsulta: arrFinalConsultaAtual[0].tempoConsulta + tempoMinAdicionar, precoConsulta: arrFinalConsultaAtual[0].precoConsulta + result.transaction_amount}).where({id_cliente: tokenDecod.id}).andWhere({aberta: true})
                 const arrSaldos = await db("usuarios").select("saldo").where({id: tokenDecod.id})
                 await db("usuarios").update({saldo: arrSaldos[0].saldo + result.transaction_amount}).where({id: tokenDecod.id})
               }
