@@ -1661,7 +1661,7 @@ server.get("/buscarSalasAtendente", confereTokenAtendente, async (req: Request, 
           arrConversas[i].tempoConsulta = arrPrecoTempoAtual[0].tempoConsulta
           arrConversas[i].finalConsulta = arrPrecoTempoAtual[0].finalConsulta
           arrConversas[i].saldo = arrNomeAtual[0].saldo
-          arrConversas[i].minutosPassados = arrNomeAtual[0].minutosPassados
+          arrConversas[i].minutosPassados = arrPrecoTempoAtual[0].minutosPassados
         }else{
           arrConversas[i].nome = "Usuário"
           arrConversas[i].precoConsulta = 0
