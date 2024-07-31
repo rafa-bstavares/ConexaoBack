@@ -1002,21 +1002,24 @@ server.post("/pegarInfoCliente", confereTokenAtendente, async (req: Request, res
   try{
     let arrInfoCliente = await db("usuarios").select("nome", "email", "saldo", "dataNas").where({id: Number(idCliente)})
     for(let i = 0; i < arrInfoCliente.length; i++){
-      const arrPrecoTempo = await db("salas").select("precoConsulta", "tempoConsulta", "finalConsulta").where({id_cliente: idCliente, id_profissional: tokenDecod.id})
+      const arrPrecoTempo = await db("salas").select("precoConsulta", "tempoConsulta", "finalConsulta", "minutosPassados").where({id_cliente: idCliente, id_profissional: tokenDecod.id})
       if(arrPrecoTempo){
         if(arrPrecoTempo[0]){
           arrInfoCliente[i].tempoConsulta = arrPrecoTempo[0].tempoConsulta
           arrInfoCliente[i].precoConsulta = arrPrecoTempo[0].precoConsulta
           arrInfoCliente[i].finalConsulta = arrPrecoTempo[0].finalConsulta
+          arrInfoCliente[i].minutosPassados = arrPrecoTempo[0].minutosPassados
         }else{
           arrInfoCliente[i].tempoConsulta = 0
           arrInfoCliente[i].precoConsulta = 0
           arrInfoCliente[i].finalConsulta = new Date()
+          arrInfoCliente[i].minutosPassados = 0
         }
       }else{
         arrInfoCliente[i].tempoConsulta = 0
         arrInfoCliente[i].precoConsulta = 0
         arrInfoCliente[i].finalConsulta = new Date()
+        arrInfoCliente[i].minutosPassados = 0
       }
 
     }
@@ -1419,6 +1422,25 @@ server.post("/mudarSaldo", confereTokenUsuario, async (req: Request, res: Respon
   }
 })
 
+
+server.post("/atualizarMinutosPassados", confereTokenAtendente, async(req:Request, res:Response) => {
+  const tokenDecod = tokenAtendenteDecodificado(req, res)
+
+  if(!tokenDecod.id){
+    return res.json(["erro", "erro ao decodificar o token do atendente. Por favor tente novamente. Caso persista é recomendado que faça login novamente."])
+  }
+
+  const {tempoDeConsulta} = req.body
+  try{
+    await db("salas").update({minutosPassados: tempoDeConsulta}).where({id_profissional: tokenDecod.id})
+    return res.json(["sucesso", "minutos passados atualizado com sucesso"])
+  }catch(err){
+    return res.json(["erro", "não foi possível atualizar os minutos passados"])
+  }
+
+})
+
+
 server.get("/pegarPrevSaldo", confereTokenUsuario, async (req: Request, res: Response) => {
   
   const tokenDecod = tokenUsuarioDecodificado(req, res)
@@ -1501,7 +1523,7 @@ server.post("/criarSala", async (req: Request, res: Response) => {
 
   try{
 
-    await db("salas").insert({id_cliente: idCliente, id_profissional: idProfissional, historico: "", precoConsulta: precoConsultaVar, tempoConsulta: tempoConsultaVar})
+    await db("salas").insert({id_cliente: idCliente, id_profissional: idProfissional, historico: "", precoConsulta: precoConsultaVar, tempoConsulta: tempoConsultaVar, minutosPassados: tempoConsultaVar - 1})
     const arrTempoAtual = await db("salas").select("inicioConsulta").where({id_cliente: idCliente, id_profissional: idProfissional})
     await db("salas").update({finalConsulta: db.raw('date_add(?, INTERVAL ? minute)', [arrTempoAtual[0].inicioConsulta, tempoConsultaVar])}).where({id_cliente: idCliente}).andWhere({aberta: true});
 
@@ -1630,20 +1652,22 @@ server.get("/buscarSalasAtendente", confereTokenAtendente, async (req: Request, 
       for(let i = 0; i < arrConversas.length; i++){
         const idClienteAtual = arrConversas[i].id_cliente
         const arrNomeAtual = await db("usuarios").select("nome", "saldo", "dataNas").where({id: idClienteAtual})
-        const arrPrecoTempoAtual = await db("salas").select("tempoConsulta", "precoConsulta", "finalConsulta").where({id_cliente: idClienteAtual})
+        const arrPrecoTempoAtual = await db("salas").select("tempoConsulta", "precoConsulta", "finalConsulta", "minutosPassados").where({id_cliente: idClienteAtual})
   
         if(arrNomeAtual.length > 0 && arrPrecoTempoAtual.length > 0){
           arrConversas[i].nome = arrNomeAtual[0].nome
           arrConversas[i].dataNas = arrNomeAtual[0].dataNas
           arrConversas[i].precoConsulta = arrPrecoTempoAtual[0].precoConsulta
           arrConversas[i].tempoConsulta = arrPrecoTempoAtual[0].tempoConsulta
-          arrConversas[i].finalConsultaConsulta = arrPrecoTempoAtual[0].finalConsultaConsulta
+          arrConversas[i].finalConsulta = arrPrecoTempoAtual[0].finalConsulta
           arrConversas[i].saldo = arrNomeAtual[0].saldo
+          arrConversas[i].minutosPassados = arrNomeAtual[0].minutosPassados
         }else{
           arrConversas[i].nome = "Usuário"
           arrConversas[i].precoConsulta = 0
           arrConversas[i].tempoConsulta = 0
           arrConversas[i].finalConsulta = new Date()
+          arrConversas[i].minutosPassados = 0
         }
   
       }
