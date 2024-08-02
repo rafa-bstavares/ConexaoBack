@@ -810,7 +810,7 @@ server.post("/login", async (req: Request, res: Response) => {
                       const token = jwt.sign({
                           id: arrUser[0][tipoIdAtual],
                           email: arrUser[0].email
-                      }, secret, {expiresIn: "24h"})
+                      }, secret, {expiresIn: "30d"})
                       if(token){
                           res.json(["sucesso", {token}] as ReturnJsonType) 
                       }else{
@@ -1917,7 +1917,7 @@ server.get("/statusPagamentoDentroConsulta", confereTokenUsuario, async (req: Re
           if(arrIdPro.length > 0){
             const arrMinPro = await db("profissionais").select("valorMin").where({id: arrIdPro[0].id_profissional})
             if(arrMinPro.length > 0 && result.transaction_amount){
-              const tempoMinAdicionar = result.transaction_amount/arrMinPro[0].valorMin
+              const tempoMinAdicionar = Math.floor(result.transaction_amount/arrMinPro[0].valorMin)
 
               const arrFinalConsultaAtual = await db("salas").select("finalConsulta", "tempoConsulta", "precoConsulta").where({id_cliente: tokenDecod.id})
 
