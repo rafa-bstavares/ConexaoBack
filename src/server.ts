@@ -10,6 +10,7 @@ import bcrypt from "bcryptjs"
 import jwt, { JwtPayload } from "jsonwebtoken"
 import dotenv from "dotenv"
 import { v4 as uuidv4 } from 'uuid';
+import nodemailer from "nodemailer"
 
 
 dotenv.config()
@@ -49,6 +50,20 @@ const db = knex({
     debug(message) {},
   },
 });
+
+
+const transporter = nodemailer.createTransport({
+  host: "mail.turbinesuamidia.com.br",
+  port: 465,
+  secure: true, // Use `true` for port 465, `false` for all other ports
+  auth: {
+    user: "conexao@turbinesuamidia.com.br",
+    pass: process.env.SENHA_EMAIL,
+  },
+});
+
+
+
 
 
 const client = new MercadoPagoConfig({ accessToken: process.env.ACCESS_TOKEN ? process.env.ACCESS_TOKEN : "", options: { timeout: 5000 } });
@@ -828,6 +843,23 @@ server.post("/login", async (req: Request, res: Response) => {
       res.status(400).json(["erro", "Ocorreu um erro ao inserir dados no banco de dados, por favor, tente novamente"] as ReturnJsonType)
   }
 
+})
+
+
+server.post("/enviarEmail", async (req: Request, res: Response) => {
+
+  const {nome, mensagem, email, celular} = req.body
+
+  const info = await transporter.sendMail({
+    from: '"Maddison Foo Koch 👻" <conexao@turbinesuamidia.com.br>', // sender address
+    to: "rafabstavares@gmail.com", // list of receivers
+    subject: "Hello ✔", // Subject line
+    text: "Hello world?", // plain text body
+    html: "<b>Hello world?</b>", // html body
+  })
+  res.json("")
+
+  console.log("Message sent: %s", info.messageId);
 })
 
 
