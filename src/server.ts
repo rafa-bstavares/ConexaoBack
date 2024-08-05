@@ -851,7 +851,7 @@ server.post("/enviarEmail", async (req: Request, res: Response) => {
   const {nome, mensagem, email, celular} = req.body
 
   transporter.sendMail({
-    from: '"Maddison Foo Koch 👻" <conexao@turbinesuamidia.com.br>', // sender address
+    from: "conexao@turbinesuamidia.com.br", // sender address
     to: "rafabstavares@gmail.com", // list of receivers
     subject: "Hello ✔", // Subject line
     text: "Hello world?", // plain text body
@@ -862,7 +862,6 @@ server.post("/enviarEmail", async (req: Request, res: Response) => {
     }else{
       res.json(["sucesso", "mensagem enviada: " + info.response])
     }
-
   })
 })
 
