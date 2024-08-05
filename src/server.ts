@@ -850,16 +850,20 @@ server.post("/enviarEmail", async (req: Request, res: Response) => {
 
   const {nome, mensagem, email, celular} = req.body
 
-  const info = await transporter.sendMail({
+  transporter.sendMail({
     from: '"Maddison Foo Koch 👻" <conexao@turbinesuamidia.com.br>', // sender address
     to: "rafabstavares@gmail.com", // list of receivers
     subject: "Hello ✔", // Subject line
     text: "Hello world?", // plain text body
     html: "<b>Hello world?</b>", // html body
-  })
-  res.json("")
+  }, (err, info) => {
+    if(err){
+      res.json(["erro", err])
+    }else{
+      res.json(["sucesso", "mensagem enviada: " + info.response])
+    }
 
-  console.log("Message sent: %s", info.messageId);
+  })
 })
 
 
