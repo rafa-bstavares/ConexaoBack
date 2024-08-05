@@ -851,8 +851,8 @@ server.post("/enviarEmail", async (req: Request, res: Response) => {
   const {nome, mensagem, email, celular} = req.body
 
   transporter.sendMail({
-    to: "rafatavdev@gmail.com", // list of receivers
-    subject: "Hello ✔", // Subject line
+    to: "rafabstavares@gmail.com", // list of receivers
+    subject: "Trabalhe conosco site", // Subject line
     html: `<p>Nome: ${nome}</p><br/><p>Email: ${email}</p><br/><p>Mensagem: ${mensagem}</p><br/><p>Celular: ${celular}</p><br/>`, // html body
   }, (err, info) => {
     if(err){
