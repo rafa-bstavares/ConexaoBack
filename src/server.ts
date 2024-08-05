@@ -53,11 +53,11 @@ const db = knex({
 
 
 const transporter = nodemailer.createTransport({
-  host: "mail.turbinesuamidia.com.br",
+  host: "smtp.gmail.com",
   port: 465,
   secure: true, // Use `true` for port 465, `false` for all other ports
   auth: {
-    user: "conexao@turbinesuamidia.com.br",
+    user: "rafabstavares@gmail.com",
     pass: process.env.SENHA_EMAIL,
   },
 });
@@ -851,11 +851,9 @@ server.post("/enviarEmail", async (req: Request, res: Response) => {
   const {nome, mensagem, email, celular} = req.body
 
   transporter.sendMail({
-    from: "conexao@turbinesuamidia.com.br", // sender address
-    to: "rafabstavares@gmail.com", // list of receivers
+    to: "rafatavdev@gmail.com", // list of receivers
     subject: "Hello ✔", // Subject line
-    text: "Hello world?", // plain text body
-    html: "<b>Hello world?</b>", // html body
+    html: `<p>Nome: ${nome}</p><br/><p>Email: ${email}</p><br/><p>Mensagem: ${mensagem}</p><br/><p>Celular: ${celular}</p><br/>`, // html body
   }, (err, info) => {
     if(err){
       res.json(["erro", err])
