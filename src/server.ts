@@ -642,7 +642,7 @@ server.post("/addInfosProfissional", async (req: Request, res: Response) => {
   const {nomeProf, emailProf, descricaoMenor, descricaoMaior, id, valorMin, percentualPro} = req.body
 
   try{
-    await db("profissionais").update({nome: nomeProf, email: emailProf, descricaoMenor, descricaoMaior, valorMin, percentualPro}).where({id})
+    await db("profissionais").update({nome: nomeProf , email: emailProf, descricaoMenor, descricaoMaior, valorMin, percentualPro}).where({id})
 
     /*for(let i = 0; i < arrTrabalho.length; i++){
       let trabalhoAtual = arrTrabalho[i]
@@ -1204,7 +1204,7 @@ server.get("/infoAtendente", async (req: Request, res: Response) => {
 })
 
 
-server.get("/infoMeuAtendente", confereTokenUsuario, async (req: Request, res: Response) => {
+server.get("/infoMeuAtendente", confereTokenUsuario, async (req: Request, res: Response) => {//Essa rota pode ser a mesma de quando uma pessoa sem cadastro pede o perfil detalhado do profsisional
   const tokenDecod = tokenUsuarioDecodificado(req, res)
 
   if(tokenDecod.id == 0){
@@ -1231,7 +1231,7 @@ server.get("/infoMeuAtendente", confereTokenUsuario, async (req: Request, res: R
 })
 
 
-server.post("/detalheProfissional", async (req: Request, res: Response) => {
+server.post("/detalheProfissional", async (req: Request, res: Response) => {//pegar as conversas do profissional
   const {idProfissional} = req.body
 
   console.log(idProfissional)
@@ -2002,6 +2002,60 @@ server.get("/cancelarPagamento", confereTokenUsuario, async (req: Request, res: 
 
 })
 
+
+server.post("/conversasFrase", async (req: Request, res: Response) => {
+  const {frase, id} = req.body
+
+if(frase){
+  try{
+    const arrConversas = await db("historicossalvos").select().where({id_profissional: id})
+    const arrGeralConversas: {temPalavra: boolean, idConversa: number, arrIdxPalavras: number[], historico: string, nomeCliente: string, nomeProfissional: string}[] = []
+    for(let i = 0; i < arrConversas.length; i++){
+      const arrNomeCliente = await db("usuarios").select("nome").where({id: arrConversas[i].id_cliente})
+      const arrNomeProfissional = await db("profissionais").select("nome").where({id: arrConversas[i].id_profissional})
+      arrGeralConversas.push({temPalavra: false, idConversa: i, arrIdxPalavras: [], historico: arrConversas[i].historico, nomeCliente: arrNomeCliente[0].nome, nomeProfissional: arrNomeProfissional[0].nome})
+      const conversaAtual = arrConversas[i].historico
+      console.log("CONVERSA ATUAL")
+      console.log(conversaAtual)
+      const arrConversaAtual = conversaAtual.split("||n||")
+      for(let j = 0; j < arrConversaAtual.length; j++){
+        let mensagemAtual = arrConversaAtual[j]
+        mensagemAtual = mensagemAtual.replace(/\n/g, " ")
+        mensagemAtual = mensagemAtual.replace(/\?/g, "")
+        mensagemAtual = mensagemAtual.replace(/\!/g, "")
+        mensagemAtual = mensagemAtual.replace(/\./g, "")
+        mensagemAtual = mensagemAtual.replace(/\,/g, "")
+
+        if(mensagemAtual.slice(0, 5) !== "[img]"){
+          const arrPalavras: string[] = mensagemAtual.slice(3).split(" ")
+          console.log(arrPalavras)
+          for(let k = 0; k < arrPalavras.length; k++){
+            const palavraAtual = arrPalavras[k]
+            console.log("PALAVRA ATUAL")
+            console.log(palavraAtual)
+            console.log(frase)
+            if(palavraAtual == frase){
+              if(arrGeralConversas[i].temPalavra == false){
+                arrGeralConversas[i].temPalavra = true
+              }
+              arrGeralConversas[i].arrIdxPalavras.push(j)
+            }
+          }
+        }
+      }
+    }
+
+    const arrFinalPalavras = arrGeralConversas.filter(item => item.temPalavra == true)
+
+    return res.json(["sucesso", arrFinalPalavras])
+
+  }catch(err){
+    console.log(err)
+    return res.json(["erro", "ocorreu um erro"])
+  }
+}
+
+})
 
 
 server.post("/testeCartao", (req: Request, res: Response) => {
