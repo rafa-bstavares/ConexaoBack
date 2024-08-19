@@ -1209,10 +1209,10 @@ server.get("/infoAtendente", async (req: Request, res: Response) => {
           return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
         }
       }else{
-        return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
+        return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente", "ta retornando o erro no arrurlsbruto.length > 0"])
       }
     }else{
-      return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
+      return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente", "ta retornando o erro no if(arrurlsbruto)"])
     }
 
 
