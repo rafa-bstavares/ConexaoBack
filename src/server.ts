@@ -1159,6 +1159,8 @@ server.post("/setarStatus", confereTokenAtendente, async (req: Request, res: Res
 server.get("/infoAtendente", async (req: Request, res: Response) => {
   const tokenDecod = tokenAtendenteDecodificado(req, res)
 
+  return res.json("não é erro de cors")
+
   const arrNome = await db("profissionais").select("nome").where({id: tokenDecod.id})
   console.log(arrNome)
   if(!arrNome || (arrNome.length == 0)){
@@ -1622,7 +1624,7 @@ server.post("/confereSalas", confereTokenUsuario, async (req: Request, res: Resp
 
     const arrStatusProfissional = await db("profissionais").select("status").where({id: idProfissional})
 
-    if(arrStatusProfissional.length > 0){
+    if(arrStatusProfissional.length > 0){ 
       if(arrStatusProfissional[0].status == "online"){
         //tá disponível
         return res.json(["sucesso", "criar sala"])
