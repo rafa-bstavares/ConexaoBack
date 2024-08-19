@@ -1159,7 +1159,9 @@ server.post("/setarStatus", confereTokenAtendente, async (req: Request, res: Res
 server.get("/infoAtendente", async (req: Request, res: Response) => {
   const tokenDecod = tokenAtendenteDecodificado(req, res)
 
-  return res.json("não é erro de cors")
+  if(!tokenDecod.id){
+    return res.json(["erro", "erro ao decodificar o token do atendente. Por favor tente novamente. Caso persista é recomendado que faça login novamente."])
+  }
 
   const arrNome = await db("profissionais").select("nome").where({id: tokenDecod.id})
   console.log(arrNome)
@@ -1168,7 +1170,15 @@ server.get("/infoAtendente", async (req: Request, res: Response) => {
   }
 
   const arrIdsBaralhosBruto = await db("trabalhos").select("id")
-  if(!arrIdsBaralhosBruto || !(arrIdsBaralhosBruto[0].id)){
+  if(arrIdsBaralhosBruto){
+    if(arrIdsBaralhosBruto.length > 0){
+      if(!(arrIdsBaralhosBruto[0].id)){
+        return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
+      }
+    }else{
+      return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
+    }
+  }else{
     return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
   }
 
@@ -1178,15 +1188,33 @@ server.get("/infoAtendente", async (req: Request, res: Response) => {
     const idAtual = arrIdsBaralhosBruto[i].id
 
     const arrNome = await db("trabalhos").select("trabalho").where({id: idAtual})
-    if(!arrNome || !(arrNome[0].trabalho)){
+    if(arrNome){
+      if(arrNome.length > 0){
+        if(!(arrNome[0].trabalho)){
+          return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
+        }
+      }else{
+        return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
+      }
+    }else{
       return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
     }
+
     const nome = arrNome[0].trabalho
 
     const arrUrlsBruto = await db("urlstrabalhos").select("url").where({id_trabalho: idAtual})
-    if(!arrUrlsBruto || !(arrUrlsBruto[0].url)){
+    if(arrUrlsBruto){
+      if(arrUrlsBruto.length > 0){
+        if(!(arrUrlsBruto[0].url)){
+          return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
+        }
+      }else{
+        return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
+      }
+    }else{
       return res.json(["erro", "ocorreu um erro ao buscar dados no banco de dados, por favor, tente novamente"])
     }
+
 
     let arrUrls = []
 
