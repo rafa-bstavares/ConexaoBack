@@ -11,6 +11,7 @@ import jwt, { JwtPayload } from "jsonwebtoken"
 import dotenv from "dotenv"
 import { v4 as uuidv4 } from 'uuid';
 import nodemailer from "nodemailer"
+import fs from "fs"
 
 
 dotenv.config()
@@ -480,6 +481,45 @@ server.get("/pegarTrabalhos", async (req: Request, res: Response) => {
     }catch(err){
       res.json(["erro", "ocorreu um erro: " + err])
     }
+})
+
+
+server.post("/deletarBaralho", confereTokenAdmGeral, async (req: Request, res: Response) => {
+  const {idItem} = req.body
+
+  if(idItem){
+    if(idItem > 0){
+      try{
+        console.log("enmtrou no try")
+        const arrUrlsDeletar = await db("urlstrabalhos").select("url").where({id_trabalho: idItem})
+        console.log("passou arrUrlsDeletar")
+        console.log(arrUrlsDeletar)
+        for(let i = 0; i < arrUrlsDeletar.length; i++){
+          let item = arrUrlsDeletar[i]
+          fs.unlink("../" + process.env.NOME_PASTA_RAIZ + "/public/images/" + item.url, function (err) {
+            if (err){console.log(err)};
+            console.log('File deleted!');
+          });
+        }
+        console.log("passou for de deletar os itens")
+        await db("urlstrabalhos").where({id_trabalho: idItem}).del()
+        console.log("passoui urls trabvalgos")
+        await db("reltrabprof").where({id_trabalho: idItem}).del()
+        await db("trabalhos").where({id: idItem}).del()
+        console.log("OXXXXXXXI")
+        return res.json(["sucesso", "item deletado com sucesso"])
+      }catch(err){
+        console.log(err)
+
+        return res.json(["erro", "ocorreu um erro ao deletar o item"])
+      }
+    }else{
+      return res.json(["erro", "ocorreu um erro ao receber o id do item do baralho que deseja ser apagado"])
+    }
+  }else{
+    return res.json(["erro", "ocorreu um erro ao receber o id do item do baralho que deseja ser apagado"])
+  }
+
 })
 
 server.get("/listaClientes", confereTokenAdmGeral, async (req: Request, res: Response) => {
