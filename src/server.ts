@@ -476,7 +476,7 @@ const uploadImg = multer({ storage });
 
 server.get("/pegarTrabalhos", async (req: Request, res: Response) => {
     try{
-      let arrTrabalhos = await db("trabalhos").select("trabalho")
+      let arrTrabalhos = await db("trabalhos").select("trabalho", "id")
       res.json(["sucesso", arrTrabalhos])
     }catch(err){
       res.json(["erro", "ocorreu um erro: " + err])
