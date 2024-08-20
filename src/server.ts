@@ -487,6 +487,8 @@ server.get("/pegarTrabalhos", async (req: Request, res: Response) => {
 server.post("/deletarBaralho", confereTokenAdmGeral, async (req: Request, res: Response) => {
   const {idItem} = req.body
 
+  console.log(idItem)
+
   if(idItem){
     if(idItem > 0){
       try{
