@@ -415,6 +415,11 @@ server.post("/editarCampo", confereTokenAdmGeral, async (req: Request, res: Resp
   objUpdate[nomeCampo] = valorCampo
 
   try{
+
+    if(nomeCampo == "email"){
+        await db("loginatendentes").update({email: valorCampo}).where({id_profissional: idProfissional})
+    }
+
     await db("profissionais").update(objUpdate).where({id: idProfissional})
     const arrNovosDados = await db("profissionais").select().where({id: idProfissional})
     return res.json(["sucesso", arrNovosDados[0]])
